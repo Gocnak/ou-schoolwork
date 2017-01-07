@@ -19,13 +19,13 @@ public class TabPulse extends Thread {
     private Color[] totalColors = new Color[200];
     private final Color controlColorDark = new Color(32, 32, 32);
 
-    private TimerListener tl;
     private javax.swing.Timer timer;
     private JComponent component;
 
     public TabPulse(JComponent comp) {
        this.component = comp;
-        tl = new TimerListener(c -> {
+        TimerListener tl = new TimerListener(c ->
+        {
             component.setBackground(c);
             component.repaint();
         });

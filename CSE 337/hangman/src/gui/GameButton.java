@@ -18,7 +18,7 @@ public class GameButton extends JButton
         TRIED_FAIL
     }
 
-    Color defaultBGColor;
+    private Color defaultBGColor;
     private BUTTON_STATE buttonState;
 
     public GameButton()
@@ -47,6 +47,4 @@ public class GameButton extends JButton
     {
         return buttonState;
     }
-
-
 }

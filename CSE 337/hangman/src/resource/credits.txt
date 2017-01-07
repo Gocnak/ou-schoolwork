@@ -3,3 +3,4 @@ Bertrof for "success.wav" and "error.wav"
 LloydEvans09 for "pluck.wav"
 LittleRobotSoundFactory for "win.wav"
 Vlad Marin on iconfinder.com for "icon.png"
+dr_kegel for the help for Sound files my Botnak project (https://github.com/Gocnak/Botnak/tree/master/src/main/java/sound)

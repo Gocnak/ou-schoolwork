@@ -25,7 +25,7 @@ public class SoundEntry implements Closeable {
     public SoundEntry(String file, SoundEntry previous, ConcurrentHashMap<String, SoundEntry> map) throws IOException {
         try {
             key = file;
-            source = AudioSystem.getAudioInputStream(getClass().getResourceAsStream(file));
+            source = AudioSystem.getAudioInputStream(getClass().getResource(file));
             this.previous = previous;
             DataLine.Info info = new DataLine.Info(Clip.class, source.getFormat());
 
@@ -100,7 +100,7 @@ public class SoundEntry implements Closeable {
             this.clip.setFramePosition(0);
         }
         FloatControl volume = (FloatControl) this.clip.getControl(FloatControl.Type.MASTER_GAIN);
-        volume.setValue(-5.0f);
+        volume.setValue(-15.0f);
         this.clip.start();
     }
 
