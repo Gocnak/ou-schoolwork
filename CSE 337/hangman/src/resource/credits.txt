@@ -1,0 +1,5 @@
+MH Software-Entwicklung for JTattoo
+Bertrof for "success.wav" and "error.wav"
+LloydEvans09 for "pluck.wav"
+LittleRobotSoundFactory for "win.wav"
+Vlad Marin on iconfinder.com for "icon.png"

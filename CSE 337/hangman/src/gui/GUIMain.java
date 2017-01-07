@@ -1,11 +1,11 @@
 package gui;
 
+import sound.Sound;
+import sound.SoundEngine;
+
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayDeque;
@@ -24,24 +24,47 @@ public class GUIMain extends JFrame {
 
     public static void log(Object mess){System.out.println(mess.toString());}
 
-    private static boolean bPlaying;
+    public static GUIMain instance;
+    public static boolean isPulsing, shutDown, bPlaying;
     private static int iTries;
-    private Deque<String> wordPool;
     private String currentWord;
+    private Deque<String> wordPool;
+    private Sound trySuccess, tryFail, tryInvalid, gameWin;
 
     public GUIMain() {
         initComponents();
         setVisible(true);
-        bPlaying = false;
+        bPlaying = isPulsing = shutDown = false;
         iTries = 0;
+
+        // Load words
         currentWord = "";
         wordPool = new ArrayDeque<>(1000);
         loadWords();
+
+        // Load sounds
+        SoundEngine.init();
+        trySuccess = new Sound("/resource/success.wav");
+        tryFail = new Sound("/resource/error.wav");
+        tryInvalid = new Sound("/resource/pluck.wav");
+        gameWin = new Sound("/resource/win.wav");
+
+        addWindowListener(new WindowAdapter()
+        {
+            @Override
+            public void windowClosing(WindowEvent e)
+            {
+                SoundEngine.getEngine().close();
+            }
+        });
+
+        instance = this;
     }
 
     private void loadWords()
     {
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream("/words.txt"))))
+        try (InputStreamReader ir = new InputStreamReader(getClass().getResourceAsStream("/resource/words.txt"));
+            BufferedReader br = new BufferedReader(ir))
         {
             java.util.List<String> words = br.lines().collect(Collectors.toList());
             Collections.shuffle(words); // Randomize the order for some more fun
@@ -55,7 +78,12 @@ public class GUIMain extends JFrame {
 
     private boolean checkDone()
     {
-        return wordLabel.getText().equalsIgnoreCase(currentWord);
+        return !bPlaying || wordLabel.getText().equalsIgnoreCase(currentWord);
+    }
+
+    public boolean shouldPulse()
+    {
+        return !shutDown && bPlaying && checkDone();
     }
 
     private void guess(char guessChar)
@@ -69,7 +97,7 @@ public class GUIMain extends JFrame {
                 guessState == GameButton.BUTTON_STATE.TRIED_FAIL ||
                 guessState == GameButton.BUTTON_STATE.TRIED_SUCCESS)
         {
-            // TODO: Play some sort of "you already guessed this" sound?
+            SoundEngine.getEngine().playSound(tryInvalid);
             return;
         }
 
@@ -90,18 +118,24 @@ public class GUIMain extends JFrame {
         setTries();
 
         setGameButtonState(guessChar, successfulGuess ? GameButton.BUTTON_STATE.TRIED_SUCCESS : GameButton.BUTTON_STATE.TRIED_FAIL);
-        if (successfulGuess)
-        {
-            // TODO: Should we play some sort of "success!" sound?
-        }
-        else {
-            // TODO: Should we play some sort of "FAIL!" sound?
-        }
 
         // Show the updated guess
         wordLabel.setText(new String(beforeGuess).toUpperCase());
 
-        // TODO: Should we check and see if they won here?
+        if (checkDone())
+        {
+            // Congrats! You won!
+            SoundEngine.getEngine().playSound(gameWin);
+            // Update the text
+            gameStateToggle.setText("End Game");
+            // Start the button pulse
+            TabPulse buttonPulse = new TabPulse(gameStateToggle);
+            buttonPulse.start();
+        }
+        else
+        {
+            SoundEngine.getEngine().playSound(successfulGuess ? trySuccess : tryFail);
+        }
     }
 
     private void guess(JButton guess)
@@ -240,6 +274,7 @@ public class GUIMain extends JFrame {
         setTitle("Hangman");
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setResizable(false);
+        setIconImage(new ImageIcon(getClass().getResource("/resource/icon.png")).getImage());
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(KeyEvent e) {
@@ -586,6 +621,7 @@ public class GUIMain extends JFrame {
         triesLabel.setText("X tries");
         triesLabel.setFont(new Font("Arial", Font.BOLD, 30));
         triesLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        triesLabel.setVisible(false);
 
         GroupLayout contentPaneLayout = new GroupLayout(contentPane);
         contentPane.setLayout(contentPaneLayout);

@@ -11,6 +11,7 @@ new FormModel {
 			"title": "Hangman"
 			"defaultCloseOperation": 2
 			"resizable": false
+			"iconImage": new com.jformdesigner.model.SwingIcon( 0, "/resource/icon.png" )
 			addEvent( new FormEvent( "java.awt.event.KeyListener", "keyReleased", "thisKeyReleased", true ) )
 			add( new FormComponent( "gui.GameButton" ) {
 				name: "button1"
@@ -245,6 +246,7 @@ new FormModel {
 				"text": "X tries"
 				"font": new java.awt.Font( "Arial", 1, 30 )
 				"horizontalAlignment": 4
+				"visible": false
 			} )
 		}, new FormLayoutConstraints( null ) {
 			"location": new java.awt.Point( 135, 115 )
