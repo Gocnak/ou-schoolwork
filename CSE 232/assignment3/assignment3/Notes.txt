@@ -1,0 +1,21 @@
+I decided to try to optimize the performance of assignment 2 (finding min, max, and mode of an array).
+
+I had previously turned in an algorithm which sorted the array, then scanned it, which completes its task in a time complexity 
+of O(N + N lg N), which can be considered slow.
+
+Using a hash map, this algorithm could be further optimized to a time complexity of O(N). For details about this implementation,
+my comments in the assignment3.cpp file can be of use.
+
+My hypothesis: Using a hashmap to accomplish the task in time O(N) will result in a faster algorithm overall for all types of input.
+
+I wrote assignment3.cpp, which is a modified version of assignment2.cpp that includes a hashmap method. The results are timed using
+std::chrono's high_resolution_clock and outputted to the console. The variables VECTOR_SIZE and RANDOM_RANGE control the size of the vector
+and the range of the random numbers that fill the vector, respectively.
+
+
+Conclusion:
+I was thoroughly surprised to find that the sort-and-scan algorithm ran faster in every use case of the program. From N very small (<100)
+to N very large (>10^6), the sort-and-scan algorithm (O(N + N lg N)) seemed to always beat the hashmap implementation.
+
+My hypothesis was completely false. It seems as though the overhead for creating (allocating) and using (find, insert) a hashmap 
+is far too great, causing it to lag behind the sort-and-scan method.
