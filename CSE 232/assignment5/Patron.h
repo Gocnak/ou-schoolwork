@@ -3,6 +3,8 @@
 //
 #pragma once
 
+#include <cstring>
+
 class Patron
 {
 public:
@@ -20,6 +22,12 @@ public:
     bool OwesFees() { return m_fFees > 0;}
 
     void SetFees(double fees) { m_fFees = fees;}
+
+    const bool &operator==(const Patron &other)
+    {
+        return strcmp(m_pName, other.m_pName) == 0 &&
+               m_iLibraryCard == other.m_iLibraryCard;
+    }
 
 private:
     const char *m_pName;
