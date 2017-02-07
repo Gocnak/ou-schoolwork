@@ -13,13 +13,13 @@ Library::Library()
 void Library::CheckoutBook(Patron &p, Book &b)
 {
     if (!HasPatron(&p))
-        ;
+        ;//TODO ERROR OUT
 
     if (!HasBook(&b))
-        ;
+        ;//TODO ERROR OUT
 
     if (p.OwesFees())
-        ;
+        ;//TODO ERROR OUT
 
     Transaction t;
     t.m_Book = b;

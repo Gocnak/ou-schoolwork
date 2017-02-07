@@ -26,25 +26,25 @@ public:
     void CheckOut();
     void CheckIn();
 
-    void SetTitle(const char *pTitle) { this->pTitle = pTitle;}
-    void SetAuthor(const char *pAuth) { pAuthor = pAuth;}
+    void SetTitle(const char *pTitle) { m_pTitle = pTitle;}
+    void SetAuthor(const char *pAuth) { m_pAuthor = pAuth;}
     void SetISBN(const char *pISBN);
-    void SetCopyrightDate(const char *pDate) { pCopyrightDate = pDate;}
-    void SetGenre(Genre g) { kBookGenre = g;}
+    void SetCopyrightDate(const char *pDate) { m_pCopyrightDate = pDate;}
+    void SetGenre(Genre g) { m_kBookGenre = g;}
 
-    bool IsCheckedOut() { return bCheckedOut; }
-    const char *GetTitle() { return pTitle;}
-    const char *GetAuthor() { return pAuthor;}
-    const char *GetISBN() { return pISBN;}
-    const char *GetCopyrightDate() { return pCopyrightDate;}
-    Genre GetGenre() { return kBookGenre;}
+    bool IsCheckedOut() { return m_bCheckedOut; }
+    const char *GetTitle() { return m_pTitle;}
+    const char *GetAuthor() { return m_pAuthor;}
+    const char *GetISBN() { return m_pISBN;}
+    const char *GetCopyrightDate() { return m_pCopyrightDate;}
+    Genre GetGenre() { return m_kBookGenre;}
 
     const bool operator==(const Book &other);
     const bool operator!=(const Book &other);
     friend std::ostream &operator<<(std::ostream &cout, Book *pBook);
 
 private:
-    bool bCheckedOut;
-    const char *pTitle, *pAuthor, *pISBN, *pCopyrightDate;
-    Genre kBookGenre;
+    bool m_bCheckedOut;
+    const char *m_pTitle, *m_pAuthor, *m_pISBN, *m_pCopyrightDate;
+    Genre m_kBookGenre;
 };
