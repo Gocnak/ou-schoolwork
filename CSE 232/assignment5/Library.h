@@ -6,12 +6,13 @@
 #include <vector>
 #include "Book.h"
 #include "Patron.h"
+#include "Chrono.h"
 
 struct Transaction
 {
     Book m_Book;
     Patron m_Patron;
-    Date m_Date;
+    Chrono::Date m_Date;
 };
 
 

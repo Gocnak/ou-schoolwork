@@ -26,17 +26,17 @@ public:
     void CheckOut();
     void CheckIn();
 
-    void SetTitle(const char *pTitle) { m_pTitle = pTitle;}
-    void SetAuthor(const char *pAuth) { m_pAuthor = pAuth;}
-    void SetISBN(const char *pISBN);
-    void SetCopyrightDate(const char *pDate) { m_pCopyrightDate = pDate;}
+    void SetTitle(std::string pTitle) { m_pTitle = pTitle;}
+    void SetAuthor(std::string pAuth) { m_pAuthor = pAuth;}
+    void SetISBN(std::string pISBN);
+    void SetCopyrightDate(std::string pDate) { m_pCopyrightDate = pDate;}
     void SetGenre(Genre g) { m_kBookGenre = g;}
 
     bool IsCheckedOut() { return m_bCheckedOut; }
-    const char *GetTitle() { return m_pTitle;}
-    const char *GetAuthor() { return m_pAuthor;}
-    const char *GetISBN() { return m_pISBN;}
-    const char *GetCopyrightDate() { return m_pCopyrightDate;}
+    std::string GetTitle() { return m_pTitle;}
+    std::string GetAuthor() { return m_pAuthor;}
+    std::string GetISBN() { return m_pISBN;}
+    std::string GetCopyrightDate() { return m_pCopyrightDate;}
     Genre GetGenre() { return m_kBookGenre;}
 
     const bool operator==(const Book &other);
@@ -45,6 +45,6 @@ public:
 
 private:
     bool m_bCheckedOut;
-    const char *m_pTitle, *m_pAuthor, *m_pISBN, *m_pCopyrightDate;
+    std::string m_pTitle, m_pAuthor, m_pISBN, m_pCopyrightDate;
     Genre m_kBookGenre;
 };

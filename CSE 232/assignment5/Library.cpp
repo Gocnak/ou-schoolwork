@@ -13,18 +13,18 @@ Library::Library()
 void Library::CheckoutBook(Patron &p, Book &b)
 {
     if (!HasPatron(&p))
-        ;//TODO ERROR OUT
+        throw std::exception();
 
     if (!HasBook(&b))
-        ;//TODO ERROR OUT
+        throw std::exception();
 
     if (p.OwesFees())
-        ;//TODO ERROR OUT
+        throw std::exception();
 
     Transaction t;
     t.m_Book = b;
     t.m_Patron = p;
-    //TODO t.m_Date = now?
+    t.m_Date = Chrono::Date(); // Just use default date I guess?
     m_vecTransaction.push_back(t);
 }
 
