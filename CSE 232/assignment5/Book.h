@@ -9,7 +9,7 @@
 
 typedef enum
 {
-    FICTION,
+    FICTION = 0,
     NON_FICTION,
     PERIODICAL,
     BIOGRAPHY,
@@ -21,7 +21,7 @@ class Book
 public:
 
     Book();
-    Book(const char *title, const char *author, const char *ISBN);
+    Book(std::string title, std::string author, std::string ISBN);
 
     void CheckOut();
     void CheckIn();

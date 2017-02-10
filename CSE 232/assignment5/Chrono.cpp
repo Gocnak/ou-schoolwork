@@ -24,21 +24,6 @@ namespace Chrono {
     {
     }
 
-    Date Date::today()
-    {
-        return Date {1978, Month::jun, 25};
-    }
-
-    void Date::add_day(int n)
-    {
-// . . .
-    }
-
-    void Date::add_month(int n)
-    {
-// . . .
-    }
-
     void Date::add_year(int n)
     {
         if (m == Month::feb && d == 29 && !leapyear(y + n)) {
@@ -90,50 +75,6 @@ namespace Chrono {
     bool operator!=(const Date &a, const Date &b)
     {
         return !(a == b);
-    }
-
-    std::ostream &operator<<(std::ostream &os, const Date &d)
-    {
-        return os << '(' << d.year()
-                  << ',' << d.month()
-                  << ',' << d.day() << ')';
-    }
-
-    std::istream &operator>>(std::istream &is, Date &dd)
-    {
-        int y, m, d;
-        char ch1, ch2, ch3, ch4;
-        is >> ch1 >> y >> ch2 >> m >> ch3 >> d >> ch4;
-        if (!is) return is;
-        if (ch1 != '(' || ch2 != ',' || ch3 != ',' || ch4 != ')') {
-// oops: format error
-            is.clear(std::ios_base::failbit);
-// set the fail bit
-            return is;
-        }
-        dd = Date(y, Month(m), d);
-// update dd
-        return is;
-    }
-
-    enum class Day
-    {
-        sunday, monday, tuesday, wednesday, thursday, friday, saturday
-    };
-
-    Day day_of_week(const Date &d)
-    {
-        return Day(d.day() % 7);
-    }
-
-    Date next_Sunday(const Date &d)
-    {
-// ...
-    }
-
-    Date next_weekday(const Date &d)
-    {
-// . . .
     }
 }
 // Chrono

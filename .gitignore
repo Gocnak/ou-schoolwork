@@ -33,6 +33,8 @@ local.properties
 
 [Oo]ut/
 
+cmake-build-debug/
+
 
 #################
 ## Visual Studio

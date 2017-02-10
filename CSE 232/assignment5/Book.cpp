@@ -5,8 +5,8 @@
 
 #include <cstring>
 #include <vector>
-#include <string>
 #include <sstream>
+#include <cstdlib>
 
 
 Book::Book()
@@ -16,13 +16,17 @@ Book::Book()
     m_pCopyrightDate = "";
     m_pISBN = "";
     m_pTitle = "";
+    m_kBookGenre = FICTION;
 }
 
-Book::Book(const char *title, const char *author, const char *ISBN)
+Book::Book(std::string title, std::string author, std::string ISBN)
 {
     m_pTitle = title;
     m_pAuthor = author;
-    m_pISBN = ISBN;
+    SetISBN(ISBN);
+    m_bCheckedOut = false;
+    m_pCopyrightDate = "";
+    m_kBookGenre = FICTION;
 }
 
 void Book::CheckOut()
@@ -37,14 +41,15 @@ void Book::CheckIn()
 
 const bool Book::operator!=(const Book &other)
 {
-    return strcmp(m_pISBN, other.m_pISBN) != 0;
+    return m_pISBN != other.m_pISBN;
 }
 
 const bool Book::operator==(const Book &other)
 {
-    return strcmp(m_pISBN, other.m_pISBN) == 0;
+    return m_pISBN == other.m_pISBN;
 }
 
+// Used for splitting strings.
 template<typename Out>
 void split(const std::string &s, char delim, Out result) {
     std::stringstream ss;
@@ -67,16 +72,16 @@ void Book::SetISBN(std::string pISBN)
     // First three must be int
     for (int i = 0; i < 3; i++)
     {
-        int test = atoi(parts[i]);
+        int test = atoi(parts[i].c_str());
         if (test < 1)
-            throw std::exception();
+            throw "The format for an ISBN is n-n-n-x! The 'n' are numbers!";
     }
-    // The last guy should be a digit or a letter
+    // The last should be a digit or a letter
     const char *last = parts[3].c_str();
     for (int i = 0; i < strlen(last); i++)
     {
         if (!isalnum(last[i]))
-            throw std::exception();
+            throw "The last part of the ISBN is not alphanumeric!";
     }
 
     // Passed all checks

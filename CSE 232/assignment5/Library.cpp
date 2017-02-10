@@ -13,22 +13,28 @@ Library::Library()
 void Library::CheckoutBook(Patron &p, Book &b)
 {
     if (!HasPatron(&p))
-        throw std::exception();
+        throw "This patron doesn't exist!";
 
     if (!HasBook(&b))
-        throw std::exception();
+        throw "This book is not in the library!";
 
     if (p.OwesFees())
-        throw std::exception();
-
-    Transaction t;
-    t.m_Book = b;
-    t.m_Patron = p;
-    t.m_Date = Chrono::Date(); // Just use default date I guess?
+    {
+        std::string err = p.GetName();
+        err.append(" owes fees and cannot checkout books!");
+        throw err.c_str();
+    }
+    
+    if (b.IsCheckedOut())
+        throw "This book is already checked out!";
+    
+    b.CheckOut();
+    
+    Transaction t = {b, p, Chrono::Date()};
     m_vecTransaction.push_back(t);
 }
 
-std::vector<Patron> &Library::GetFeePatrons()
+std::vector<Patron> Library::GetFeePatrons()
 {
     std::vector<Patron> feePatrons;
     for (auto i = 0; i < m_vecPatrons.size(); i++)

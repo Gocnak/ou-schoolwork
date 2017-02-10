@@ -58,9 +58,5 @@ namespace Chrono {
     bool operator==(const Date &a, const Date &b);
 
     bool operator!=(const Date &a, const Date &b);
-
-    std::ostream &operator<<(std::ostream &os, const Date &d);
-
-    std::istream &operator>>(std::istream &is, Date &dd);
 }
 // Chrono

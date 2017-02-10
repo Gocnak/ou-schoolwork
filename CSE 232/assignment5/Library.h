@@ -25,7 +25,7 @@ public:
     void AddBook(Book &b) { m_vecBooks.push_back(b);}
     void AddPatron(Patron &p) { m_vecPatrons.push_back(p);}
     void CheckoutBook(Patron &p, Book &b);
-    std::vector<Patron> &GetFeePatrons();
+    std::vector<Patron> GetFeePatrons();
 
     bool HasPatron(Patron *p);
     bool HasBook(Book *b);
