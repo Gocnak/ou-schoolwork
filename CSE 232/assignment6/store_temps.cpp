@@ -9,8 +9,8 @@ struct Reading { // a temperature reading
     double temperature; // in Fahrenheit
 };
 
-// Macro'd here for ease of change. We're doing this over a 24 hour period.
-#define MAX_HOURS 24
+// Macro'd here for ease of change. We're doing this over a 24 hour period, but the assignment calls for "at least 50".
+#define MAX_HOURS 51
 
 int main()
 {
