@@ -12,7 +12,7 @@ public class NewtonSqrtTest {
 
         double[] expected = {};
 
-        for (int i = 0 i < expected.length; i++)
+        for (int i = 0; i < expected.length; i++)
         {
             assertEquals(NewtonSqrt.newton_sqrt(testA[i], testE[i]), expected[i], 0.01);
         }
