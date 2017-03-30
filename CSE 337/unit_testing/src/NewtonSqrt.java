@@ -6,7 +6,7 @@ public class NewtonSqrt {
     // with error less than e.
     public static double newton_sqrt(double a, double e) throws Exception
     {
-        if (a < 0 || e <= 0.0)
+        if (a <= 0.0 || e <= 0.0)
             throw new Exception("Your inputs are bad!");
 
         double x = 0.5 * a;
