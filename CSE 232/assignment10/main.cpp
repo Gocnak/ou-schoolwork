@@ -64,6 +64,15 @@ public:
         return *this;
     }
 
+    RAII &operator=(RAII &&other)
+    {
+        r_free();
+        m_pPayload = other.m_pPayload;
+        other.m_pPayload = nullptr;
+        log("Moved data from the RAII with ID %i, into the RAII with ID %i", other.m_iInstance, m_iInstance);
+        return *this;
+    }
+
     static int instanceIDs;
 
     void r_log()
@@ -113,6 +122,7 @@ int RAII::instanceIDs = 0;
 void test1()
 {
     log("TEST ONE! (Regular instantiation)");
+    RAII blah(20);
     RAII *test1_1 = new RAII();
     RAII *test1_2 = new RAII(10);
     RAII *test1_3 = new RAII(*test1_2);
@@ -124,59 +134,42 @@ void test1()
 void test2_and_3()
 {
     log("TEST TWO! (Put in a vector)");
-    RAII *test2_1 = new RAII(20);
-    RAII *test2_2 = new RAII(20);
-    RAII *test2_3 = new RAII(30);
-    std::vector<RAII*> instances;
-    instances.push_back(test2_1);
-    instances.push_back(test2_2);
-    instances.push_back(test2_3);
+    std::vector<RAII> instances;
+    instances.push_back(RAII(20));
+    instances.push_back(RAII(30));
+    instances.push_back(RAII(40));
 
-    for (RAII *e : instances)
+    for (RAII e : instances)
     {
-        e->r_log();
+        e.r_log();
     }
 
     log("TEST THREE! (Vector of instances copied)");
     // Note: I don't think this is what was intended, since I store pointers in both.
-    std::vector<RAII*> copy_into;
+    std::vector<RAII> copy_into;
     copy_into = instances;
 
-    for (RAII *e : copy_into)
+    for (RAII e : copy_into)
     {
-        e->r_log();
+        e.r_log();
     }
-
-    delete test2_1;
-    delete test2_2;
-    delete test2_3;
 }
 
 
 // Case 1: Move constructor
-RAII *test_func1(size_t size = 10)
+RAII test_func1(size_t size = 10)
 {
-    return new RAII(size);
-}
-
-// Case 2: Move assignment
-RAII *test_func2(RAII *toAssignTo, size_t size = 10)
-{
-    toAssignTo = new RAII(size);
-    return toAssignTo;
+    return RAII(size);
 }
 
 void test4()
 {
     log("TEST FOUR! (Returned from function)");
-    log("Case 1: (move constructor");
-    RAII *test4_1 = test_func1(20);
-    log("Case 2: (copy assignment)");
-    RAII *test4_2 = nullptr;
-    test4_2 = test_func2(test4_2, 20);
-
-    delete(test4_1);
-    delete(test4_2);
+    log("Case 1: (move assignment)");
+    RAII test4_1(20);
+    test4_1 = test_func1(20);
+    log("Case 2: (move constructor)");
+    RAII test4_2 = test_func1(20);
 }
 
 
