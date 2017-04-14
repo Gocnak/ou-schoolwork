@@ -1,6 +1,6 @@
 #include <iostream>
-#include "GUI/Graph.h"
-#include "GUI/Simple_window.h"
+#include "../GUI/Graph.h"
+#include "../GUI/Simple_window.h"
 
 class Bezier : public Shape
 {
