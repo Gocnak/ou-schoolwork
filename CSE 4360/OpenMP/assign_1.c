@@ -5,15 +5,31 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "memory.h"
-
 #include "omp.h"
-
 #include <sys/time.h>
-#include <time.h>
 
+// ======== Defines for the entire project =========
+// Getting the value of the macro as a string
+#define STR(name) #name
+#define MACRO_VALUE(name) STR(name)
 
 // Define the number of histogram bins here
 #define HIST_BINS 10
+
+// Define the number of threads to use
+#define THREADS 8
+
+// Define the chunk size
+#define CHUNK 4
+
+// Define the scheduling type
+#define SCHED_TYPE dynamic
+
+// Define the scheduling to use
+#define SCHEDULE schedule(SCHED_TYPE, CHUNK)
+
+// Define the scheduling value as a string
+#define SCHED_VALUE MACRO_VALUE(SCHEDULE)
 
 // gets the current time in seconds with microsecond precision
 double get_time()
@@ -101,7 +117,7 @@ int main(int argc, char *argv[])
     int N = atoi(argv[1]);
     int M = atoi(argv[2]);
     // Setup random generator
-    srand(time(NULL));
+    srand(1 << 12);
     // Generate the matrix
     int (*matrix)[N] = malloc(sizeof(int[N][N]));
     init(N, M, matrix);
@@ -114,6 +130,8 @@ int main(int argc, char *argv[])
     // Things used by the macro
     double initialClock, executionTime; // used for timing
     int max; // used for storing the max
+
+    printf("Running the tests with %d thread(s) and %s\n", THREADS, SCHED_VALUE);
 
     // Perform the "find the max" tests
     PERFORM_TEST_MAX(find_matrix_max_s);
@@ -173,7 +191,7 @@ int find_matrix_max_p1(int N, int matrix[N][N])
 
     int num_threads;
 
-    #pragma omp parallel shared(matrix)
+    #pragma omp parallel shared(matrix) num_threads(THREADS)
     {
         int i, j, start, end;
 
@@ -201,7 +219,7 @@ void fill_bins_p1(int N, int M, int hist[], int matrix[N][N])
 {
     int num_threads;
 
-    #pragma omp parallel
+    #pragma omp parallel num_threads(THREADS)
     {
         int i, j, start, end;
 
@@ -245,7 +263,7 @@ int find_matrix_max_p2(int N, int matrix[N][N])
 {
     int toReturn = INT_MIN;
 
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(THREADS) SCHEDULE
     for (int i = 0; i < N; i++)
         for (int j = 0; j < N; j++)
             if (matrix[i][j] > toReturn)
@@ -256,12 +274,12 @@ int find_matrix_max_p2(int N, int matrix[N][N])
 
 void fill_bins_p2(int N, int M, int hist[], int matrix[N][N])
 {
-    #pragma omp parallel
+    #pragma omp parallel num_threads(THREADS)
     {
         int local_bins[HIST_BINS];
         memset(local_bins, 0, sizeof(local_bins));
 
-        #pragma omp for nowait
+        #pragma omp for nowait SCHEDULE
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
                 // Loop over bin indices
@@ -288,7 +306,7 @@ int find_matrix_max_p3(int N, int matrix[N][N])
 {
     int toReturn = INT_MIN;
 
-    #pragma omp parallel for reduction(max:toReturn)
+    #pragma omp parallel for reduction(max:toReturn) num_threads(THREADS) SCHEDULE
     for (int i = 0; i < N; i++)
         for (int j = 0; j < N; j++)
             if (matrix[i][j] > toReturn)
@@ -299,7 +317,7 @@ int find_matrix_max_p3(int N, int matrix[N][N])
 
 void fill_bins_p3(int N, int M, int hist[], int matrix[N][N])
 {
-    #pragma omp parallel for reduction(+:hist[:HIST_BINS])
+    #pragma omp parallel for reduction(+:hist[:HIST_BINS]) num_threads(THREADS) SCHEDULE
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             // Loop over bin indices
