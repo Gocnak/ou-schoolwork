@@ -17,10 +17,10 @@
 #define HIST_BINS 10
 
 // Define the number of threads to use
-#define THREADS 8
+#define THREADS 12
 
 // Define the chunk size
-#define CHUNK 4
+#define CHUNK 8
 
 // Define the scheduling type
 #define SCHED_TYPE dynamic
@@ -30,6 +30,10 @@
 
 // Define the scheduling value as a string
 #define SCHED_VALUE MACRO_VALUE(SCHEDULE)
+
+// Const defines for when no parameters are given
+const int N_global = 10000;
+const int M_global = 1000;
 
 // gets the current time in seconds with microsecond precision
 double get_time()
@@ -109,13 +113,18 @@ void fill_bins_p3(int N, int M, int hist[], int matrix[N][N]);
 
 int main(int argc, char *argv[])
 {
-    if (argc < 3) {
-        fprintf(stderr, "Usage: assign_1 <num elems> <max elem> \n");
-        exit(1);
-    }
+    int N, M;
     // Gather the size of matrix (N) and max possible value (M)
-    int N = atoi(argv[1]);
-    int M = atoi(argv[2]);
+    if (argc < 3) {
+        // Use the globals when the arguments weren't passed right
+        N = N_global;
+        M = M_global;
+    }
+    else {
+        N = atoi(argv[1]);
+        M = atoi(argv[2]);
+    }
+    
     // Setup random generator
     srand(1 << 12);
     // Generate the matrix
