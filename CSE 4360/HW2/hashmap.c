@@ -107,7 +107,7 @@ typedef struct _hashmap_map
 /*
  * Return an empty hashmap, or NULL on failure.
  */
-map_t hashmap_new(size_t initial_size)
+map_t hashmap_new(unsigned long long initial_size)
 {
     hashmap_map *m = (hashmap_map *) malloc(sizeof(hashmap_map));
     if (!m) return NULL;

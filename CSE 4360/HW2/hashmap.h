@@ -9,8 +9,6 @@
 #ifndef __HASHMAP_H__
 #define __HASHMAP_H__
 
-#include <glob.h>
-
 #define MAP_MISSING -3  /* No such element */
 #define MAP_FULL -2    /* Hashmap is full */
 #define MAP_OMEM -1    /* Out of Memory */
@@ -38,7 +36,7 @@ typedef any_t map_t;
 /*
  * Return an empty hashmap. Returns NULL if empty.
 */
-extern map_t hashmap_new(size_t initial_size);
+extern map_t hashmap_new(unsigned long long initial_size);
 
 /*
  * Add an element to the hashmap. Return MAP_OK or MAP_OMEM.
@@ -65,4 +63,4 @@ extern void hashmap_free(map_t in);
  */
 extern int hashmap_length(map_t in);
 
-#endif __HASHMAP_H__
+#endif
