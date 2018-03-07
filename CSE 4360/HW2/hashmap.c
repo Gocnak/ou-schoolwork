@@ -9,78 +9,8 @@
 #include <pthread.h>
 #include <math.h>
 
-#define K_LOCKS 10 // K number of mutexes
 #define USE_K_LOCKS 1 // Use k-block mutexes?
 #define USE_RW_LOCKS 0 // Use read-write mutex?
-
-#if USE_RW_LOCKS
-typedef struct
-{
-    int readers;
-    int writer;
-    pthread_cond_t readers_proceed;
-    pthread_cond_t writer_proceed;
-    int pending_writers;
-    pthread_mutex_t read_write_lock;
-} mylib_rwlock_t;
-
-void mylib_rwlock_init(mylib_rwlock_t *l)
-{
-    l->readers = l->writer = l->pending_writers = 0;
-    pthread_mutex_init(&(l->read_write_lock), NULL);
-    pthread_cond_init(&(l->readers_proceed), NULL);
-    pthread_cond_init(&(l->writer_proceed), NULL);
-}
-
-void mylib_rwlock_destroy(mylib_rwlock_t *l)
-{
-    pthread_mutex_destroy(&l->read_write_lock);
-    pthread_cond_destroy(&l->readers_proceed);
-    pthread_cond_destroy(&l->writer_proceed);
-}
-
-void mylib_rwlock_rlock(mylib_rwlock_t *l)
-{
-    pthread_mutex_lock(&(l->read_write_lock));
-
-    while ((l->pending_writers > 0) || (l->writer > 0))
-        pthread_cond_wait(&(l->readers_proceed), &(l->read_write_lock));
-
-    l->readers++;
-
-    pthread_mutex_unlock(&(l->read_write_lock));
-}
-
-void mylib_rwlock_wlock(mylib_rwlock_t *l)
-{
-    pthread_mutex_lock(&(l->read_write_lock));
-    l->pending_writers++;
-
-    while ((l->writer > 0) || l->readers > 0)
-        pthread_cond_wait(&(l->writer_proceed), &(l->read_write_lock));
-
-    l->pending_writers--;
-    l->writer++;
-
-    pthread_mutex_unlock(&(l->read_write_lock));
-}
-
-void mylib_rwlock_unlock(mylib_rwlock_t *l)
-{
-    pthread_mutex_lock(&(l->read_write_lock));
-
-    if (l->writer > 0) // only writer
-        l->writer = 0;
-    else if (l->readers > 0) // only reader
-        l->readers--;
-    pthread_mutex_unlock(&(l->read_write_lock));
-
-    if (l->readers == 0 & l->pending_writers > 0)
-        pthread_cond_signal(&(l->writer_proceed));
-    else if (l->readers > 0)
-        pthread_cond_broadcast(&(l->readers_proceed));
-}
-#endif
 
 /* We need to keep keys and values */
 typedef struct _hashmap_element
@@ -98,16 +28,17 @@ typedef struct _hashmap_map
     size_t size;
     hashmap_element *data;
 #if USE_K_LOCKS
+    unsigned long long k_locks;
     pthread_mutex_t *block_mutexes;
 #elif USE_RW_LOCKS
-    mylib_rwlock_t rw_lock;
+    pthread_rwlock_t rw_lock;
 #endif
 } hashmap_map;
 
 /*
  * Return an empty hashmap, or NULL on failure.
  */
-map_t hashmap_new(unsigned long long initial_size)
+map_t hashmap_new(unsigned long long initial_size, size_t k_locks)
 {
     hashmap_map *m = (hashmap_map *) malloc(sizeof(hashmap_map));
     if (!m) return NULL;
@@ -119,17 +50,21 @@ map_t hashmap_new(unsigned long long initial_size)
     }
 
 #if USE_K_LOCKS
-    m->block_mutexes = (pthread_mutex_t *) calloc(K_LOCKS, sizeof(pthread_mutex_t));
+    m->k_locks = k_locks;
+    m->block_mutexes = (pthread_mutex_t *) calloc(k_locks, sizeof(pthread_mutex_t));
     if (!m->block_mutexes) {
         hashmap_free(m);
         return NULL;
-    } else {
-        for (int i = 0; i < K_LOCKS; i++) {
+    }
+    else
+    {
+        for (int i = 0; i < k_locks; i++)
+        {
             pthread_mutex_init(&m->block_mutexes[i], NULL);
         }
     }
 #elif USE_RW_LOCKS
-    mylib_rwlock_init(&m->rw_lock);
+    pthread_rwlock_init(&m->rw_lock, NULL);
 #endif
 
     m->table_size = initial_size;
@@ -283,6 +218,7 @@ unsigned int hashmap_hash_int(hashmap_map *m, char *keystring)
  */
 int hashmap_hash(map_t in, char *key)
 {
+    int toReturn = MAP_FULL;
     int curr;
     int i;
 
@@ -291,23 +227,42 @@ int hashmap_hash(map_t in, char *key)
 
     /* If full, return immediately */
     if (m->size >= (m->table_size))
-        return MAP_FULL;
+        return toReturn;
 
     /* Find the best index */
     curr = hashmap_hash_int(m, key);
 
+#if USE_K_LOCKS
+    int block = (int) floor((curr / m->table_size) * m->k_locks);
+    pthread_mutex_lock(&m->block_mutexes[block]);
+#elif USE_RW_LOCKS
+    pthread_rwlock_rdlock(&m->rw_lock);
+#endif
+    
     /* Linear probing */
     for (i = 0; i < m->table_size; i++) {
         if (m->data[curr].in_use == 0)
-            return curr;
+        {
+            toReturn = curr;
+            break;
+        }
 
         if (m->data[curr].in_use == 1 && (strcmp(m->data[curr].key, key) == 0))
-            return curr;
+        {
+            toReturn = curr;
+            break;
+        }
 
         curr = (curr + 1) % m->table_size;
     }
 
-    return MAP_FULL;
+#if USE_K_LOCKS
+    pthread_mutex_unlock(&m->block_mutexes[block]);
+#elif USE_RW_LOCKS
+    pthread_rwlock_unlock(&m->rw_lock);
+#endif
+
+    return toReturn;
 }
 
 /*
@@ -326,10 +281,10 @@ int hashmap_put(map_t in, char *key, any_t value)
     index = hashmap_hash(in, key);
 
 #if USE_K_LOCKS
-    int block = (int) floor((index / m->table_size) * K_LOCKS);
+    int block = (int) floor((index / m->table_size) * m->k_locks);
     pthread_mutex_lock(&m->block_mutexes[block]);
 #elif USE_RW_LOCKS
-    mylib_rwlock_wlock(&m->rw_lock);
+    pthread_rwlock_wrlock(&m->rw_lock);
 #endif
 
     if (index == MAP_FULL)
@@ -346,7 +301,7 @@ int hashmap_put(map_t in, char *key, any_t value)
 #if USE_K_LOCKS
     pthread_mutex_unlock(&m->block_mutexes[block]);
 #elif USE_RW_LOCKS
-    mylib_rwlock_unlock(&m->rw_lock);
+    pthread_rwlock_unlock(&m->rw_lock);
 #endif
 
     return toReturn;
@@ -370,10 +325,10 @@ int hashmap_get(map_t in, char *key, any_t *arg)
     curr = hashmap_hash_int(m, key);
 
 #if USE_K_LOCKS
-    int block = (int) floor(((curr / m->table_size) * K_LOCKS));
+    int block = (int) floor(((curr / m->table_size) * m->k_locks));
     pthread_mutex_lock(&m->block_mutexes[block]);
 #elif USE_RW_LOCKS
-    mylib_rwlock_rlock(&m->rw_lock);
+    pthread_rwlock_rdlock(&m->rw_lock);
 #endif
     /* Linear probing, if necessary */
     for (i = 0; i < m->table_size; i++) {
@@ -391,7 +346,7 @@ int hashmap_get(map_t in, char *key, any_t *arg)
 #if USE_K_LOCKS
     pthread_mutex_unlock(&m->block_mutexes[block]);
 #elif USE_RW_LOCKS
-    mylib_rwlock_unlock(&m->rw_lock);
+    pthread_rwlock_unlock(&m->rw_lock);
 #endif
 
     /* Not found */
@@ -415,10 +370,10 @@ int hashmap_remove(map_t in, char *key)
     curr = hashmap_hash_int(m, key);
 
 #if USE_K_LOCKS
-    int block = (int) floor((curr / m->table_size) * K_LOCKS);
+    int block = (int) floor((curr / m->table_size) * m->k_locks);
     pthread_mutex_lock(&m->block_mutexes[block]);
 #elif USE_RW_LOCKS
-    mylib_rwlock_wlock(&m->rw_lock);
+    pthread_rwlock_wrlock(&m->rw_lock);
 #endif
 
     /* Linear probing, if necessary */
@@ -444,7 +399,7 @@ int hashmap_remove(map_t in, char *key)
 #if USE_K_LOCKS
     pthread_mutex_unlock(&m->block_mutexes[block]);
 #elif USE_RW_LOCKS
-    mylib_rwlock_unlock(&m->rw_lock);
+    pthread_rwlock_unlock(&m->rw_lock);
 #endif
 
     return toReturn;
@@ -456,13 +411,13 @@ void hashmap_free(map_t in)
     hashmap_map *m = (hashmap_map *) in;
     free(m->data);
 #if USE_K_LOCKS
-    for (int i = 0; i < K_LOCKS; i++) {
+    for (int i = 0; i < m->k_locks; i++) {
         pthread_mutex_destroy(&m->block_mutexes[i]);
     }
 
     free(m->block_mutexes);
 #elif USE_RW_LOCKS
-    mylib_rwlock_destroy(&m->rw_lock);
+    pthread_rwlock_destroy(&m->rw_lock);
 #endif
     free(m);
 }
