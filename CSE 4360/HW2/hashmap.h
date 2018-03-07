@@ -36,7 +36,7 @@ typedef any_t map_t;
 /*
  * Return an empty hashmap. Returns NULL if empty.
 */
-extern map_t hashmap_new(unsigned long long initial_size, unsigned long long k_locks);
+extern map_t hashmap_new(unsigned long long initial_size, int k_locks);
 
 /*
  * Add an element to the hashmap. Return MAP_OK or MAP_OMEM.

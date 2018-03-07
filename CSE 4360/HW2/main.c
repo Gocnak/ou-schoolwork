@@ -96,7 +96,7 @@ double run_test(unsigned long long K)
 }
 
 #define TEST_ITER 1 // how many times to run the test to average against
-#define MAX_K 1000 // the maximum number of K locks
+#define MAX_K 100 // the maximum number of K locks
 
 int main(char *argv, int argc)
 {
@@ -110,7 +110,7 @@ int main(char *argv, int argc)
         }
         
         results[i] = sum / TEST_ITER;
-        printf("Result for %d : %.3f msec\n", i, results[i]);
+        printf("Result for K=%d : %.3f msec\n", i + 1, results[i]);
         
     }
 
