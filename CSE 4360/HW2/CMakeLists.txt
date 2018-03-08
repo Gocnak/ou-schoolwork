@@ -6,7 +6,9 @@ set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 
 find_package(Threads)
 
-set(SOURCE_FILES main.c hashmap.c hashmap.h)
+set(SOURCE_FILES problem-1.c problem-2.c hashmap.c hashmap.h priority_queue.c priority_queue.h map.c map.h set.c set.h utils.c utils.h)
+
+add_definitions(-DPROBLEM_2)
 
 add_executable(HW2 ${SOURCE_FILES})
 

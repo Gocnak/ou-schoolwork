@@ -8,6 +8,7 @@
 #include "pthread.h"
 #include <sys/time.h>
 #include "hashmap.h"
+#include "utils.h"
 
 #define KEY_MAX_LENGTH (256)
 #define KEY_PREFIX ("somekey")
@@ -26,15 +27,6 @@ typedef struct
     map_t map;
     int offset;
 } thread_args;
-
-// gets the current time in seconds with microsecond precision
-double get_time()
-{
-    struct timeval t;
-    struct timezone tzp;
-    gettimeofday(&t, &tzp);
-    return t.tv_sec + t.tv_usec * 1e-6;
-}
 
 void *HashThread(void *params)
 {
@@ -95,9 +87,10 @@ double run_test(unsigned long long K)
     return time;
 }
 
-#define TEST_ITER 1 // how many times to run the test to average against
-#define MAX_K 100 // the maximum number of K locks
+#define TEST_ITER 3 // how many times to run the test to average against
+#define MAX_K 1000 // the maximum number of K locks
 
+#if PROBLEM_1
 int main(char *argv, int argc)
 {
     double results[MAX_K];
@@ -116,3 +109,4 @@ int main(char *argv, int argc)
 
     return 1;
 }
+#endif
