@@ -120,7 +120,7 @@ void matMul(int N, float **matrix1, float **matrix2, float **result)
 
     for (int ijk = 0; ijk < sqr; ijk++)
     {
-        int i = ijk / sqr;
+        int i = ijk / N;
         int j = (ijk / N) % N;
         int k = ijk % N;
         result[i][j] += matrix1[i][k] * matrix2[k][j];
