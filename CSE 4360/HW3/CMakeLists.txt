@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
-project(HW3 C)
+option(ENABLE_CUDA "Enable the cuda build" ON)
 
-find_package(CUDA QUIET REQUIRED)
-
-set(CMAKE_C_STANDARD 99)
-
-add_executable(HW3 main.c)
+if(ENABLE_CUDA)
+    add_definitions(-DENABLE_CUDA)
+    add_subdirectory(parallel)
+else()
+    add_subdirectory(serial)
+endif()

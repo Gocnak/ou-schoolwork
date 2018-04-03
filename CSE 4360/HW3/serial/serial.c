@@ -1,9 +1,12 @@
-#include <stdio.h>
-#include <malloc.h>
+//
+// Created by nick on 4/3/18.
+//
+
 #include <memory.h>
 #include <stdlib.h>
+#include "serial.h"
 
-
+extern inline void findStart(int N, MAT_POS pos, int *, int *, int *, int*);
 
 float* allocate_mem(float*** arr, int n, int m)
 {
@@ -19,50 +22,8 @@ void deallocate_mem(float*** arr, float* arr_data){
     free(*arr);
 }
 
-typedef enum
-{
-    MAT_TL = 0, // Top left
-    MAT_TR = 1, // Top right
-    MAT_BL = 2, // Bottom left
-    MAT_BR = 3 // Bottom right
-} MAT_POS;
-
-void findStart(int N, MAT_POS pos, int *i, int *j, int *i_end, int *j_end)
-{
-    switch (pos)
-    {
-        case MAT_TL:
-            *i = 0;
-            *j = 0;
-            *i_end = N;
-            *j_end = N;
-            break;
-        case MAT_TR:
-            *i = 0;
-            *j = N;
-            *i_end = N;
-            *j_end = 2*N;
-            break;
-        case MAT_BL:
-            *i = N;
-            *j = 0;
-            *i_end = 2*N;
-            *j_end = N;
-            break;
-        case MAT_BR:
-            *i = N;
-            *j = N;
-            *i_end = 2*N;
-            *j_end = 2*N;
-            break;
-    }
-}
-
 void fillIdentity(int N, float **matrix, MAT_POS pos, float scalar)
 {
-    // Assuming it's NxN
-    //int posi = (N*N*pos);
-
     int i_start, j_start, i_end, j_end;
     findStart(N, pos, &i_start, &j_start, &i_end, &j_end);
     for (int i = i_start; i < i_end; i++)
@@ -100,17 +61,6 @@ void fillRand(int N, float **matrix, MAT_POS pos, float scalar)
     }
 }
 
-void printMatrix(int N, float **matrix)
-{
-    for (int i = 0; i < 2*N; i++)
-    {
-        for (int j = 0; j < 2*N; j++)
-        {
-            printf("%.1f ", matrix[i][j]);
-        }
-        printf("\n");
-    }
-}
 
 //Assuming NxN matricies
 void matMul(int N, float **matrix1, float **matrix2, float **result)
@@ -127,7 +77,21 @@ void matMul(int N, float **matrix1, float **matrix2, float **result)
     }
 }
 
-float rothVerf(int N)
+#define fabs(val) (val) < 0.0f ? (-(val)) : (val)
+
+float mat_diff(int N, float **matrix1, float **matrix2)
+{
+    float diff = 0.0f;
+    for (int ij = 0; ij < (N*N); ij++)
+    {
+        int i = ij / N;
+        int j = (ij / N) % N;
+        diff += fabs(matrix1[i][j] - matrix2[i][j]);
+    }
+    return diff;
+}
+
+float rothVerf_serial(int N)
 {
     float **matrix_1, **matrix_2, **result;
     float *free_point_1 = allocate_mem(&matrix_1, N*2, N*2);
@@ -169,15 +133,11 @@ float rothVerf(int N)
     printMatrix(N, matrix_2);
     printf("RHS:\n");
     printMatrix(N, result);*/
+    float diff = mat_diff(N, matrix_2, result);
 
     deallocate_mem(&matrix_1, free_point_1);
     deallocate_mem(&matrix_2, free_point_2);
     deallocate_mem(&result, free_point_3);
-}
 
-
-int main()
-{
-    rothVerf(10000);
-    return 0;
+    return diff;
 }
