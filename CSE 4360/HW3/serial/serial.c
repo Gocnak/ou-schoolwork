@@ -4,25 +4,22 @@
 
 #include <memory.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <sys/time.h>
 #include "serial.h"
 
 extern inline void findStart(int N, MAT_POS pos, int *, int *, int *, int*);
 
-float* allocate_mem(float*** arr, int n, int m)
+// gets the current time in seconds with microsecond precision
+double get_time()
 {
-    *arr = (float**)malloc(n * sizeof(float*));
-    float *arr_data = malloc( n * m * sizeof(float));
-    for(int i=0; i<n; i++)
-        (*arr)[i] = arr_data + i * m ;
-    return arr_data; //free point
+    struct timeval t;
+    struct timezone tzp;
+    gettimeofday(&t, &tzp);
+    return t.tv_sec + t.tv_usec * 1e-6;
 }
 
-void deallocate_mem(float*** arr, float* arr_data){
-    free(arr_data);
-    free(*arr);
-}
-
-void fillIdentity(int N, float **matrix, MAT_POS pos, float scalar)
+void fillIdentity(int N, float *matrix, MAT_POS pos, float scalar)
 {
     int i_start, j_start, i_end, j_end;
     findStart(N, pos, &i_start, &j_start, &i_end, &j_end);
@@ -30,12 +27,12 @@ void fillIdentity(int N, float **matrix, MAT_POS pos, float scalar)
     {
         for (int j = j_start; j < j_end; j++)
         {
-            matrix[i][j] = (i == j) ? (scalar) : 0.0f;
+            matrix[i*N+j] = (i == j) ? (scalar) : 0.0f;
         }
     }
 }
 
-void fillZeros(int N, float **matrix, MAT_POS pos)
+void fillZeros(int N, float *matrix, MAT_POS pos)
 {
     int i_start, j_start, i_end, j_end;
     findStart(N, pos, &i_start, &j_start, &i_end, &j_end);
@@ -43,12 +40,12 @@ void fillZeros(int N, float **matrix, MAT_POS pos)
     {
         for (int j = j_start; j < j_end; j++)
         {
-            matrix[i][j] = 0.0f;
+            matrix[i*N+j] = 0.0f;
         }
     }
 }
 
-void fillRand(int N, float **matrix, MAT_POS pos, float scalar)
+void fillRand(int N, float *matrix, MAT_POS pos, float scalar)
 {
     int i_start, j_start, i_end, j_end;
     findStart(N, pos, &i_start, &j_start, &i_end, &j_end);
@@ -56,77 +53,89 @@ void fillRand(int N, float **matrix, MAT_POS pos, float scalar)
     {
         for (int j = j_start; j < j_end; j++)
         {
-            matrix[i][j] = scalar * (rand() / (float)RAND_MAX);
+            matrix[i*N+j] = scalar * (rand() / (float)RAND_MAX);
         }
     }
 }
 
 
 //Assuming NxN matricies
-void matMul(int N, float **matrix1, float **matrix2, float **result)
+void matMul(int N, const float *matrix1, const float *matrix2, float *result)
 {
     int sqr = N*N;
-    memset(*result, 0, sqr * sizeof(float));
+    memset(result, 0, sqr * sizeof(float));
 
     for (int ijk = 0; ijk < sqr; ijk++)
     {
         int i = ijk / N;
         int j = (ijk / N) % N;
         int k = ijk % N;
-        result[i][j] += matrix1[i][k] * matrix2[k][j];
+        result[i*N+j] += matrix1[i*N+k] * matrix2[k*N+j];
     }
 }
 
 #define fabs(val) (val) < 0.0f ? (-(val)) : (val)
 
-float mat_diff(int N, float **matrix1, float **matrix2)
+float mat_diff(int N, const float *matrix1, const float *matrix2)
 {
     float diff = 0.0f;
     for (int ij = 0; ij < (N*N); ij++)
     {
         int i = ij / N;
         int j = (ij / N) % N;
-        diff += fabs(matrix1[i][j] - matrix2[i][j]);
+        diff += fabs(matrix1[i*N+j] - matrix2[i*N+j]);
     }
     return diff;
 }
 
+void printMatrix(int N, float *matrix)
+{
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            printf("%.1f ", matrix[i*N+j]);
+        }
+        printf("\n");
+    }
+}
+
 float rothVerf_serial(int N)
 {
-    float **matrix_1, **matrix_2, **result;
-    float *free_point_1 = allocate_mem(&matrix_1, N*2, N*2);
-    float *free_point_2 = allocate_mem(&matrix_2, N*2, N*2);
-    float *free_point_3 = allocate_mem(&result, N*2, N*2);
+    int extent = 2*N;
+    float *matrix_1 = (float*)malloc(extent*extent*sizeof(float));
+    float *matrix_2 = (float*)malloc(extent*extent*sizeof(float));
+    float *result = (float*)malloc(extent*extent*sizeof(float));
 
     srand(100);
 
-    fillIdentity(N, matrix_1, MAT_TL, 1.0f);
-    fillRand(N, matrix_1, MAT_TR, 1.0f);
-    fillZeros(N, matrix_1, MAT_BL);
-    fillIdentity(N, matrix_1, MAT_BR, 1.0f);
+    fillIdentity(extent, matrix_1, MAT_TL, 1.0f);
+    fillRand(extent, matrix_1, MAT_TR, 1.0f);
+    fillZeros(extent, matrix_1, MAT_BL);
+    fillIdentity(extent, matrix_1, MAT_BR, 1.0f);
 
-    fillIdentity(N, matrix_2, MAT_TL, 1.0f);
-    fillRand(N, matrix_2, MAT_TR, 2.0f);
-    fillZeros(N, matrix_2, MAT_BL);
-    fillIdentity(N, matrix_2, MAT_BR, -1.0f);
+    fillIdentity(extent, matrix_2, MAT_TL, 1.0f);
+    fillRand(extent, matrix_2, MAT_TR, 2.0f);
+    fillZeros(extent, matrix_2, MAT_BL);
+    fillIdentity(extent, matrix_2, MAT_BR, -1.0f);
 
     // Multiply these two
-    matMul(2*N, matrix_1, matrix_2, result);
+    matMul(extent, matrix_1, matrix_2, result);
 
     // Re-use matrix_1 for last matrix
-    fillIdentity(N, matrix_1, MAT_TL, 1.0f);
-    fillRand(N, matrix_1, MAT_TR, -1.0f);
-    fillZeros(N, matrix_1, MAT_BL);
-    fillIdentity(N, matrix_1, MAT_BR, 1.0f);
+    fillIdentity(extent, matrix_1, MAT_TL, 1.0f);
+    fillRand(extent, matrix_1, MAT_TR, -1.0f);
+    fillZeros(extent, matrix_1, MAT_BL);
+    fillIdentity(extent, matrix_1, MAT_BR, 1.0f);
 
     // Multiply result * matrix_1 into matrix_2
-    matMul(2*N, result, matrix_1, matrix_2);
+    matMul(extent, result, matrix_1, matrix_2);
 
     // Re-use result for RHS matrix
-    fillIdentity(N, result, MAT_TL, 1.0f);
-    fillZeros(N, result, MAT_TR);
-    fillZeros(N, result, MAT_BL);
-    fillIdentity(N, result, MAT_BR, -1.0f);
+    fillIdentity(extent, result, MAT_TL, 1.0f);
+    fillZeros(extent, result, MAT_TR);
+    fillZeros(extent, result, MAT_BL);
+    fillIdentity(extent, result, MAT_BR, -1.0f);
 
     // Compare matrix_2 and result
     /*printf("LHS:\n");
@@ -135,9 +144,17 @@ float rothVerf_serial(int N)
     printMatrix(N, result);*/
     float diff = mat_diff(N, matrix_2, result);
 
-    deallocate_mem(&matrix_1, free_point_1);
-    deallocate_mem(&matrix_2, free_point_2);
-    deallocate_mem(&result, free_point_3);
+    free(matrix_1);
+    free(matrix_2);
+    free(result);
 
     return diff;
+}
+
+int main()
+{
+    double start = get_time();
+    float diffSerial = rothVerf_serial(10000);
+    printf("Serial diff: %.1f\n in time %.3f ms", diffSerial, (get_time() - start) * 1000.0f);
+    return 0;
 }

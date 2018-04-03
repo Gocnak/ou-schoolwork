@@ -5,4 +5,4 @@
 
 double get_time();
 
-void printMatrix(int N, float **matrix);
+void printMatrix(int N, float *matrix);

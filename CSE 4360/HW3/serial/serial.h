@@ -13,10 +13,11 @@ typedef enum
 
 inline void findStart(int N, MAT_POS pos, int *i, int *j, int *i_end, int *j_end)
 {
-    *i = (pos < MAT_BL) ? 0 : N;
-    *j = (pos % 2 == 1) ? N : 0;
-    *i_end = (pos < MAT_BL) ? N : 2*N;
-    *j_end = (pos % 2 == 1) ? 2*N : N;
-}
+    int isTop = (pos < MAT_BL);
+    int isRight = (pos % 2 == 1);
 
-float rothVerf_serial(int N);
+    *i = (isTop) ? 0 : N/2;
+    *j = (isRight) ? N/2 : 0;
+    *i_end = (isTop) ? N/2 : N;
+    *j_end = (isRight) ? N : N/2;
+}
