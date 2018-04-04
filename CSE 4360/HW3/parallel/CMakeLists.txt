@@ -2,6 +2,5 @@ cmake_minimum_required(VERSION 3.10)
 project(cud CUDA)
 find_package(CUDA REQUIRED)
 
-include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
-
-add_executable(cud parallel.h parallel.cu)
+add_executable(cud parallel_cublas.cu)
+cuda_add_cublas_to_target(cud)

@@ -1,12 +1,10 @@
-//
-// Created by nick on 4/3/18.
-//
 #include "cuda.h"
 #include <stdio.h>
 #include <host_defines.h>
 #include <device_launch_parameters.h>
 #include <cuda_runtime.h>
 #include <sys/time.h>
+#include <cublas_v2.h>
 
 #define TILE_DIM 16
 
@@ -28,48 +26,6 @@ inline void findStart(int N, MAT_POS pos, int *i, int *j, int *i_end, int *j_end
     *j = (isRight) ? N/2 : 0;
     *i_end = (isTop) ? N/2 : N;
     *j_end = (isRight) ? N : N/2;
-}
-
-__global__ void coalescedMultiply(float *a, float *b, float *c, int N)
-{
-    __shared__ float aTile[TILE_DIM][TILE_DIM], bTile[TILE_DIM][TILE_DIM];
-
-    int row = blockIdx.y * TILE_DIM + threadIdx.y;
-    int col = blockIdx.x * TILE_DIM + threadIdx.x;
-    float sum = 0.0f;
-    int idx;
-    for (int sub = 0; sub < gridDim.x; ++sub)
-    {
-        idx = row * N + sub * TILE_DIM + threadIdx.x;
-        if (idx >= N*N)
-        {
-            aTile[threadIdx.y][threadIdx.x] = 0;
-        }
-        else {
-            aTile[threadIdx.y][threadIdx.x] = a[idx];
-        }
-
-        idx = (sub * TILE_DIM + threadIdx.y) * N + col;
-        if (idx >= N*N)
-        {
-            bTile[threadIdx.y][threadIdx.x] = 0;
-        }
-        else {
-            bTile[threadIdx.y][threadIdx.x] = b[idx];
-        }
-
-        __syncthreads();
-
-        for (int k = 0; k < TILE_DIM; k++)
-        {
-            sum += aTile[threadIdx.y][k] * bTile[k][threadIdx.x];
-        }
-
-        __syncthreads();
-    }
-
-    if (row < N && col < N)
-        c[row * N + col] = sum;
 }
 
 static void HandleError( cudaError_t err,
@@ -177,6 +133,16 @@ float rothVerf_parallel(int ext)
 
     HANDLE_ERROR(cudaEventRecord(start, 0));
 
+    cublasHandle_t handle;
+    cublasStatus_t stat = cublasCreate_v2(&handle);
+
+    if (stat != CUBLAS_STATUS_SUCCESS)
+    {
+        printf("!!!! Cublas init error!\n");
+        return -1.0f;
+    }
+
+
     float *d_m1, *d_m2, *d_m3;
     HANDLE_ERROR(cudaMalloc((void**)&d_m1, N*N*sizeof(float)));
     HANDLE_ERROR(cudaMalloc((void**)&d_m2, N*N*sizeof(float)));
@@ -200,7 +166,14 @@ float rothVerf_parallel(int ext)
     HANDLE_ERROR(cudaMemset(d_m3, 0, N*N*sizeof(float)));
 
     // Do the multiplication
-    coalescedMultiply<<<dimGrid, dimBlock>>>(d_m1, d_m2, d_m3, N);
+    const float alpha = 1.0f;
+    const float beta = 0.0f;
+    stat = cublasSgemm_v2(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, N, N, &alpha, d_m1, N, d_m2, N, &beta, d_m3, N);
+    if (stat != CUBLAS_STATUS_SUCCESS)
+    {
+        printf("Failed the first multiply!\n");
+        return -1.0f;
+    }
 
     HANDLE_ERROR(cudaDeviceSynchronize()); // Wait for completion
 
@@ -216,7 +189,13 @@ float rothVerf_parallel(int ext)
     HANDLE_ERROR(cudaMemset(d_m2, 0, N*N*sizeof(float)));
     // Now copy over the new matrix_1
     HANDLE_ERROR(cudaMemcpy(d_m1, matrix_1, N*N*sizeof(float), cudaMemcpyHostToDevice));
-    coalescedMultiply<<<dimGrid, dimBlock>>>(d_m3, d_m1, d_m2, N);
+
+    stat = cublasSgemm_v2(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, N, N, &alpha, d_m3, N, d_m1, N, &beta, d_m2, N);
+    if (stat != CUBLAS_STATUS_SUCCESS)
+    {
+        printf("Failed the second multiply!\n");
+        return -1.0f;
+    }
 
     HANDLE_ERROR(cudaThreadSynchronize()); // Wait for completion
 
@@ -261,9 +240,9 @@ int main(int argc, char** argv)
     if (argc > 1)
         N = atoi(argv[1]);
 
-    printf("Calculating CUDA with N=%d\n", N);
+    printf("Calculating cudaBLAS with N=%d\n", N);
     double start = get_time();
     float err = rothVerf_parallel(N);
-    printf("Error is %.1f in total runtime of %.2f ms\n", err, (get_time() - start) * 1000.0f);
+    printf("Error is %.1f, total time in %.2f ms", err, (get_time() - start) * 1000.0f);
     return 0;
 }

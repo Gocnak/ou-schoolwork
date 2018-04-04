@@ -6,10 +6,24 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
-#include "serial.h"
+typedef enum
+{
+    MAT_TL = 0, // Top left
+    MAT_TR = 1, // Top right
+    MAT_BL = 2, // Bottom left
+    MAT_BR = 3 // Bottom right
+} MAT_POS;
 
-extern inline void findStart(int N, MAT_POS pos, int *, int *, int *, int*);
+void findStart(int N, MAT_POS pos, int *i, int *j, int *i_end, int *j_end)
+{
+    int isTop = (pos < MAT_BL);
+    int isRight = (pos % 2 == 1);
 
+    *i = (isTop) ? 0 : N/2;
+    *j = (isRight) ? N/2 : 0;
+    *i_end = (isTop) ? N/2 : N;
+    *j_end = (isRight) ? N : N/2;
+}
 // gets the current time in seconds with microsecond precision
 double get_time()
 {
@@ -151,10 +165,16 @@ float rothVerf_serial(int N)
     return diff;
 }
 
-int main()
+int main(int argc, char **argv)
 {
+    int N = 5000;
+    if (argc > 1)
+        N = atoi(argv[1]);
+
+    printf("Calculating serial with N=%d\n", N);
+
     double start = get_time();
-    float diffSerial = rothVerf_serial(10000);
+    float diffSerial = rothVerf_serial(N);
     printf("Serial diff: %.1f\n in time %.3f ms", diffSerial, (get_time() - start) * 1000.0f);
     return 0;
 }
