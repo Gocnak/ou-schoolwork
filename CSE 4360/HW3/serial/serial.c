@@ -28,8 +28,7 @@ void findStart(int N, MAT_POS pos, int *i, int *j, int *i_end, int *j_end)
 double get_time()
 {
     struct timeval t;
-    struct timezone tzp;
-    gettimeofday(&t, &tzp);
+    gettimeofday(&t, NULL);
     return t.tv_sec + t.tv_usec * 1e-6;
 }
 

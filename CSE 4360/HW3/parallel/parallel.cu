@@ -87,8 +87,7 @@ static void HandleError( cudaError_t err,
 double get_time()
 {
     struct timeval t;
-    struct timezone tzp;
-    gettimeofday(&t, &tzp);
+    gettimeofday(&t, NULL);
     return t.tv_sec + t.tv_usec * 1e-6;
 }
 
