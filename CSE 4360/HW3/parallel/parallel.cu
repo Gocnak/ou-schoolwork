@@ -9,30 +9,48 @@
 #include <cuda_runtime.h>
 #include <sys/time.h>
 
-#define TILE_DIM 32
+#define TILE_DIM 16
 
 __global__ void coalescedMultiply(float *a, float *b, float *c, int N)
 {
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    float sum = 0.0f;
-    for (int i = 0; i < TILE_DIM; i++) {
-        sum += a[row*TILE_DIM+i] * b[i*N+col];
-    }
-    c[row*N+col] = sum;
-    /*__shared__ float aTile[TILE_DIM][TILE_DIM], bTile[TILE_DIM][TILE_DIM];
+    __shared__ float aTile[TILE_DIM][TILE_DIM], bTile[TILE_DIM][TILE_DIM];
 
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    int row = blockIdx.y * TILE_DIM + threadIdx.y;
+    int col = blockIdx.x * TILE_DIM + threadIdx.x;
     float sum = 0.0f;
-    aTile[threadIdx.y][threadIdx.x] = a[row*TILE_DIM+threadIdx.x];
-    bTile[threadIdx.y][threadIdx.x] = b[threadIdx.y*N+col];
-    __syncthreads();
-    for (int i = 0; i < TILE_DIM; i++)
+    int idx;
+    for (int sub = 0; sub < gridDim.x; ++sub)
     {
-        sum += aTile[threadIdx.y][i] * bTile[i][threadIdx.x];
+        idx = row * N + sub * TILE_DIM + threadIdx.x;
+        if (idx >= N*N)
+        {
+            aTile[threadIdx.y][threadIdx.x] = 0;
+        }
+        else {
+            aTile[threadIdx.y][threadIdx.x] = a[idx];
+        }
+
+        idx = (sub * TILE_DIM + threadIdx.y) * N + col;
+        if (idx >= N*N)
+        {
+            bTile[threadIdx.y][threadIdx.x] = 0;
+        }
+        else {
+            bTile[threadIdx.y][threadIdx.x] = b[idx];
+        }
+
+        __syncthreads();
+
+        for (int k = 0; k < TILE_DIM; k++)
+        {
+            sum += aTile[threadIdx.y][k] * bTile[k][threadIdx.x];
+        }
+
+        __syncthreads();
     }
-    c[row*N+col] = sum;*/
+
+    if (row < N && col < N)
+        c[row * N + col] = sum;
 }
 
 static void HandleError( cudaError_t err,
@@ -124,8 +142,8 @@ float rothVerf_parallel(int ext)
 {
     int N = ext*2;
     // Configuration
-    dim3 threadsPerBlock(TILE_DIM, TILE_DIM);
-    dim3 numBlocks(N / threadsPerBlock.x, N / threadsPerBlock.y);
+    dim3 dimGrid(((N + TILE_DIM - 1) / TILE_DIM), ((N + TILE_DIM - 1) / TILE_DIM));
+    dim3 dimBlock(TILE_DIM, TILE_DIM);
     srand(100);
 
     // Memory allocation
@@ -133,6 +151,12 @@ float rothVerf_parallel(int ext)
     matrix_1 = (float*)malloc(N*N*sizeof(float));
     matrix_2 = (float*)malloc(N*N*sizeof(float));
     result = (float*)malloc(N*N*sizeof(float));
+
+    cudaEvent_t start, stop;
+    HANDLE_ERROR(cudaEventCreate(&start));
+    HANDLE_ERROR(cudaEventCreate(&stop));
+
+    HANDLE_ERROR(cudaEventRecord(start, 0));
 
     float *d_m1, *d_m2, *d_m3;
     HANDLE_ERROR(cudaMalloc((void**)&d_m1, N*N*sizeof(float)));
@@ -157,7 +181,7 @@ float rothVerf_parallel(int ext)
     HANDLE_ERROR(cudaMemset(d_m3, 0, N*N*sizeof(float)));
 
     // Do the multiplication
-    coalescedMultiply<<<numBlocks, threadsPerBlock>>>(d_m1, d_m2, d_m3, N);
+    coalescedMultiply<<<dimGrid, dimBlock>>>(d_m1, d_m2, d_m3, N);
 
     HANDLE_ERROR(cudaDeviceSynchronize()); // Wait for completion
 
@@ -173,12 +197,19 @@ float rothVerf_parallel(int ext)
     HANDLE_ERROR(cudaMemset(d_m2, 0, N*N*sizeof(float)));
     // Now copy over the new matrix_1
     HANDLE_ERROR(cudaMemcpy(d_m1, matrix_1, N*N*sizeof(float), cudaMemcpyHostToDevice));
-    coalescedMultiply<<<numBlocks, threadsPerBlock>>>(d_m3, d_m1, d_m2, N);
+    coalescedMultiply<<<dimGrid, dimBlock>>>(d_m3, d_m1, d_m2, N);
 
     HANDLE_ERROR(cudaThreadSynchronize()); // Wait for completion
 
     // Copy over d_m2 into matrix_1 for comparison
     HANDLE_ERROR(cudaMemcpy(matrix_1, d_m2, N*N*sizeof(float), cudaMemcpyDeviceToHost));
+
+    HANDLE_ERROR(cudaEventRecord(stop, 0));
+    HANDLE_ERROR(cudaEventSynchronize(stop));
+
+    float gpu_elapsed_ms;
+    HANDLE_ERROR(cudaEventElapsedTime(&gpu_elapsed_ms, start, stop));
+    printf("Done calculating! Elapsed time: %.1f ms\n", gpu_elapsed_ms);
 
     // Re-use result for RHS matrix
     fillIdentity(N, result, MAT_TL, 1.0f);
@@ -186,8 +217,8 @@ float rothVerf_parallel(int ext)
     fillZeros(N, result, MAT_BL);
     fillIdentity(N, result, MAT_BR, -1.0f);
 
-    printf("LHS:\n");
-    printMa(N, matrix_1);
+    //printf("LHS:\n");
+    //printMa(N, matrix_1);
 
     // Get the error sum
     float error = mat_diff(N, result, matrix_1);
@@ -205,9 +236,15 @@ float rothVerf_parallel(int ext)
     return error;
 }
 
-int main()
+int main(int argc, char** argv)
 {
-    float err = rothVerf_parallel(10);
+    int N = 1000;
+    if (argc > 1)
+        N = atoi(argv[1]);
+
+    printf("Calculating CUDA with N=%d\n", N);
+
+    float err = rothVerf_parallel(N);
     printf("Error is %.1f\n", err);
     return 0;
 }

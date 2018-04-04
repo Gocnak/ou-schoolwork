@@ -4,4 +4,4 @@ find_package(CUDA REQUIRED)
 
 include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 
-add_executable(cud parallel.h parallel.cu ../utils.h ../utils.c)
+add_executable(cud parallel.h parallel.cu)
